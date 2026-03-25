@@ -175,7 +175,8 @@ This ensures accuracy for the specific version.
 - Script 25 synthesizes all concepts into a production-ready template
 
 ## GitHub Repository
-<!-- Fill in after gh repo create -->
+- Repository: https://github.com/TheRadMod/experiment-claude-agent-sdk
+- Visibility: public
 
 ## Status
 - Created: 2026-03-25
