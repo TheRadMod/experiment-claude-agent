@@ -12,12 +12,14 @@ for building larger agent-based applications.
 
 - Technology: Claude Agent SDK
 - Package: `claude-agent-sdk`
-- Version: 0.1.50
+- Version: 0.1.50 (installed from GitHub main branch for bug fixes)
 - Python requirement: >= 3.10
 - Version check date: 2026-03-25
 - PyPI: https://pypi.org/project/claude-agent-sdk/
+- Install command: `uv add git+https://github.com/anthropics/claude-agent-sdk-python.git`
 - Note: Future sessions should check if a newer version is available
-  and decide whether to use this version or upgrade.
+  and decide whether to use this version or upgrade. Once PyPI v0.1.51+
+  ships with the can_use_tool fix, switch back to PyPI.
 
 ## Documentation Sources
 
@@ -177,6 +179,64 @@ This ensures accuracy for the specific version.
 ## GitHub Repository
 - Repository: https://github.com/TheRadMod/experiment-claude-agent
 - Visibility: public
+
+## Learnings (from building scripts)
+
+### query() vs ClaudeSDKClient
+- `query()` is stateless one-shot — each call is independent, no conversation memory
+- `ClaudeSDKClient` maintains persistent connection with conversation history
+- `query()` with a string prompt spawns CLI with `--print` flag (stdin closed immediately)
+- `query()` with AsyncIterable prompt uses `--input-format stream-json` (stdin stays open)
+- `ClaudeSDKClient.__aenter__` uses an empty AsyncIterable internally — stdin stays
+  open because `stream_input` is never started (prompt=None path)
+- `client.query("string")` writes directly to transport, bypassing `stream_input`
+
+### Message types and the agentic loop
+- **SystemMessage** (subtype="init"): First message, contains cwd, session_id, tools list
+  - Tools are strings (tool names), not dicts — SDK version dependent
+  - 31 built-in tools available by default
+- **AssistantMessage**: Claude's output, contains content blocks:
+  - `TextBlock` — text responses
+  - `ToolUseBlock` — tool calls (name, id, input dict)
+  - `ThinkingBlock` — extended thinking (appears as separate AssistantMessage)
+- **UserMessage**: SDK-generated tool results, contains:
+  - `ToolResultBlock` — tool_use_id (links to ToolUseBlock.id), content, is_error
+  - `is_error` can be `True`, `None`, or `False` — None means success
+- **ResultMessage**: Final summary — subtype, num_turns, total_cost_usd,
+  duration_ms, duration_api_ms, session_id, is_error
+- ThinkingBlock appears as a separate AssistantMessage, not combined with ToolUseBlock
+
+### Tool control
+- `allowed_tools` is a pre-approval list, NOT a restriction — tools not in the list
+  can still execute (they just prompt for permission or auto-approve)
+- `disallowed_tools` is the actual restriction — blocked tools cannot be used at all
+- To truly restrict tools: use `disallowed_tools` or `can_use_tool` callback
+- The CLI auto-approves "safe" Bash commands (ls, cat, etc.) via `bashToolHasPermission`
+  heuristic — canUseTool callback only fires for tools the CLI considers unsafe
+- When Bash is blocked via disallowed_tools, Claude falls back to Glob/Grep/Read but
+  struggles — takes more turns and costs 2-3x more
+
+### system_prompt
+- `system_prompt` accepts a string or a SystemPromptPreset (for append mode)
+- Persona prompts change tone/style dramatically (critical vs balanced)
+- Constraint prompts effectively control output structure (bullet points, length)
+- Without a system prompt, Claude may use subagent (Agent tool) for complex tasks;
+  with a focused system prompt, it tends to use tools directly
+
+### ClaudeSDKClient multi-turn
+- Conversation history is preserved across turns within the same client session
+- Follow-up queries can reference information from earlier turns without re-reading files
+- `client.query("string")` converts the string to the streaming dict format internally
+  and writes directly to the transport — no AsyncIterable needed
+- Turn count in ResultMessage is cumulative across the session (turn 1 = 3,
+  turn 2 = 1, turn 3 = 1 → each result reports its own turn count, not cumulative)
+- Cost increases with each turn because the full conversation history is sent with
+  each API call (turn 1: $0.02, turn 2: $0.02, turn 3: $0.03 for same-complexity tasks)
+
+### Cost patterns (approximate, for reference)
+- Simple one-shot query with 1 tool call: ~$0.01-0.04
+- Multi-tool analysis (Glob + Grep + Read combined): ~$0.10
+- System prompt has minimal cost impact; turn count is the main driver
 
 ## Known Issues & Findings
 
