@@ -1,4 +1,4 @@
-# Claude Agent SDK - Experimental Project
+# Claude Agent - Experimental Project
 
 ## Overview
 
@@ -149,7 +149,7 @@ This ensures accuracy for the specific version.
 - Anthropic API key (set as ANTHROPIC_API_KEY environment variable)
 - Install packages:
   ```bash
-  cd /home/radmod/pythonprojects/experiments/claude-agent-sdk
+  cd /home/radmod/pythonprojects/experiments/claude_agent
   pip install -r requirements.txt
   ```
 - Verify setup:
@@ -175,7 +175,7 @@ This ensures accuracy for the specific version.
 - Script 25 synthesizes all concepts into a production-ready template
 
 ## GitHub Repository
-- Repository: https://github.com/TheRadMod/experiment-claude-agent-sdk
+- Repository: https://github.com/TheRadMod/experiment-claude-agent
 - Visibility: public
 
 ## Status
