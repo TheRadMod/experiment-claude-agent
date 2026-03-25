@@ -95,7 +95,7 @@ This ensures accuracy for the specific version.
 - Naming: NN_descriptive_name.py (numbered for progression)
 - Each script: Self-contained, independently runnable with `python3 NN_name.py`
 - Logging: `logging` module with console output (StreamHandler)
-- Output: Both terminal output and file output (where applicable, e.g., logs, reports)
+- Output: Both terminal output and file output (every script logs to output/<script_name>.log)
 - run_all script: Yes — `run_all.py` with selective options (pick scripts to run)
 - Docstring: Each script starts with a module docstring explaining the concept
 - Main guard: All scripts use `if __name__ == "__main__"`
@@ -177,6 +177,26 @@ This ensures accuracy for the specific version.
 ## GitHub Repository
 - Repository: https://github.com/TheRadMod/experiment-claude-agent
 - Visibility: public
+
+## Known Issues & Findings
+
+- **SDK must be installed from GitHub main branch** — PyPI v0.1.50 has a bug
+  where `can_use_tool` sends wrong response format (Issue #200): `{"allow": true}`
+  instead of `{"behavior": "allow", "updatedInput": {...}}`. Fixed on main branch
+  but not yet released. Install with:
+  `uv add git+https://github.com/anthropics/claude-agent-sdk-python.git`
+- **can_use_tool + query() has stdin race** (Issue #469, PR #714): When using
+  `query()` with AsyncIterable, `stream_input()` closes stdin after the iterator
+  completes, before the CLI can send control requests. Workaround: keep the
+  AsyncIterable alive with `await done_event.wait()`. Using `ClaudeSDKClient`
+  avoids this entirely since `stream_input` is never started.
+- **allowed_tools is NOT a restriction** — It only pre-approves tools; unlisted
+  tools still execute if no callback/deny rule blocks them. Use `disallowed_tools`
+  for actual restrictions.
+- **CLI auto-approves safe Bash commands** — The CLI's `bashToolHasPermission`
+  heuristic auto-approves read-only commands (ls, cat, etc.) even in "default"
+  permission mode. The canUseTool callback only fires for tools the CLI considers
+  unsafe (Write, Edit, dangerous Bash commands).
 
 ## Status
 - Created: 2026-03-25

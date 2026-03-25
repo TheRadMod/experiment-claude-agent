@@ -19,6 +19,7 @@ Usage:
 
 import asyncio
 import logging
+import os
 
 from claude_agent_sdk import (
     query,
@@ -30,24 +31,32 @@ from claude_agent_sdk import (
 )
 
 # ---------------------------------------------------------------------------
-# Logging setup — all experiment scripts use the logging module with console
-# output, as decided in our script conventions.
+# Logging setup — all experiment scripts use the logging module with both
+# console and file output (output/<script_name>.log).
 # ---------------------------------------------------------------------------
 
 def setup_logging() -> logging.Logger:
-    """Configure and return a logger with console output."""
+    """Configure and return a logger with console and file output."""
     logger = logging.getLogger("basic_query")
     logger.setLevel(logging.INFO)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
         fmt="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%H:%M:%S",
     )
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+
+    # File handler
+    os.makedirs("output", exist_ok=True)
+    file_handler = logging.FileHandler("output/01_basic_query.log", mode="w")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
     return logger
 
