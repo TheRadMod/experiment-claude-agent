@@ -233,6 +233,19 @@ This ensures accuracy for the specific version.
 - Cost increases with each turn because the full conversation history is sent with
   each API call (turn 1: $0.02, turn 2: $0.02, turn 3: $0.03 for same-complexity tasks)
 
+### Streaming input (AsyncIterable prompt)
+- Streaming input is INCREMENTAL, not batch-then-respond — the agent processes
+  each streamed message as it arrives and responds immediately
+- Each yielded message triggers a separate response cycle with its own
+  SystemMessage(init) and ResultMessage
+- Conversation history accumulates across cycles — cycle 3 sees all of 1+2
+- Cost increases per cycle because full history is re-sent each time
+- After the AsyncIterable iterator completes, `stream_input()` calls
+  `end_input()` which closes stdin — fine for pure message streaming,
+  but breaks can_use_tool (see Known Issues section)
+- The dict format for each message must be:
+  `{"type": "user", "message": {"role": "user", "content": "..."}, "parent_tool_use_id": None, "session_id": "..."}`
+
 ### Cost patterns (approximate, for reference)
 - Simple one-shot query with 1 tool call: ~$0.01-0.04
 - Multi-tool analysis (Glob + Grep + Read combined): ~$0.10
